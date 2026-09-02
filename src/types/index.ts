@@ -115,25 +115,68 @@ export interface Crop {
 }
 
 export interface CropRecommendation {
+  // Identity
   cropId: string;
   cropName: string;
   cropNameHi: string;
+
+  // Ranking
   rank: number;
-  suitabilityScore: number;     // 0-100
-  expectedYield: number;        // quintal/acre
-  estimatedCost: number;        // ₹/acre
-  expectedRevenue: number;      // ₹/acre
-  expectedProfit: number;       // ₹/acre
+
+  // Composite scores (0-100)
+  suitabilityScore: number;       // alias for overallScore (UI backward compat)
+  overallScore: number;           // true overall engine score
+  soilCompatibility: number;      // soil suitability score
+  weatherCompatibility: number;   // weather suitability score
+  waterFitScore: number;          // water fit score
+  marketCompatibility: number;    // market score
+  historyScore: number;           // crop history / rotation score
+
+  // Detailed soil breakdown
+  soilBreakdown?: {
+    pH: number;
+    nitrogen: number;
+    phosphorus: number;
+    potassium: number;
+    ec: number;
+    moisture: number;
+    organicCarbon: number;
+  };
+
+  // Yield & Financials
+  expectedYield: number;          // quintal/acre
+  estimatedCost: number;          // ₹/acre
+  expectedRevenue: number;        // ₹/acre
+  expectedProfit: number;         // ₹/acre
+  profitMargin: number;           // %
+
+  // Water
   waterRequirement: 'low' | 'medium' | 'high' | 'very_high';
-  riskScore: number;            // 0-100
+  waterRequirementMM?: number;
+  waterStressPct?: number;
+
+  // Risk
+  riskScore: number;              // 0-100
   riskLevel: 'low' | 'medium' | 'high';
-  confidenceScore: number;      // 0-100
+  riskBreakdown?: {
+    water: number;
+    weather: number;
+    market: number;
+    soil: number;
+  };
+
+  // Confidence
+  confidenceScore: number;        // 0-100 (data completeness based)
+
+  // Action / Recommendation status
   action: 'recommended' | 'consider' | 'high_risk' | 'do_not_plant';
+
+  // Explainability
   reasons: string[];
   warnings: string[];
-  soilCompatibility: number;
-  weatherCompatibility: number;
-  marketCompatibility: number;
+
+  // Market price used in calculation
+  marketCompatibility_price?: number;
 }
 
 export interface RiskAssessment {
@@ -157,6 +200,15 @@ export interface PortfolioAllocation {
   waterStress: number;
   riskScore: number;
   color: string;
+  // Extended optimizer fields
+  profitPerAcre?: number;
+  riskLevel?: 'low' | 'medium' | 'high';
+  waterRequirement?: 'low' | 'medium' | 'high' | 'very_high';
+  overallScore?: number;
+  compositeScore?: number;
+  profitScore?: number;
+  waterFitScore?: number;
+  marketCompatibility?: number;
 }
 
 export interface Portfolio {
@@ -172,6 +224,11 @@ export interface Portfolio {
   explanation: string;
   createdAt: string;
   isDemo: boolean;
+  // Extended optimizer fields
+  optimizationScore?: number;
+  explanations?: string[];
+  warnings?: string[];
+  portfolioRiskScore?: number;
 }
 
 export interface ScenarioInput {
