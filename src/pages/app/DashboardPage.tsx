@@ -1,46 +1,67 @@
-import { useState, useEffect } from 'react';
+// ============================================================
+// MittiMitra AI — Dashboard (AI Farm Decision Command Center)
+// Prompt 6
+// ============================================================
+
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TestTube2, CloudSun, TrendingUp, Brain, Droplets, BarChart3,
-  AlertTriangle, CheckCircle2, ArrowRight, Zap, Leaf
+  Brain, AlertTriangle, CheckCircle2, ArrowRight, Zap,
+  TestTube2, CloudSun, Droplets, TrendingUp, CalendarDays,
+  ShieldAlert, Activity, ChevronRight
 } from 'lucide-react';
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid
+} from 'recharts';
 import { useFarm } from '../../context/FarmContext';
 import { useAuth } from '../../context/AuthContext';
-import { KpiCard, DemoBadge, RiskBadge, ScoreBar, InfoNote } from '../../components/shared';
+import { KpiCard, DemoBadge, RiskBadge, ScoreBar, InfoNote, SectionLabel } from '../../components/shared';
 import { formatCurrency, getScoreColor } from '../../lib/utils';
 import { calcSoilHealthScore } from '../../lib/calculations';
-import { DEMO_WEATHER } from '../../data/weather';
+import { DEMO_WEATHER, DEMO_WATER } from '../../data/weather';
+import { DEMO_MARKET } from '../../data/market';
+import { THREE_SEASON_PLAN_A } from '../../data/planner';
 
-const ANALYSIS_STEPS = [
-  'Analyzing Soil Data...',
-  'Checking Weather Conditions...',
-  'Evaluating Water Availability...',
-  'Analyzing Market Prices...',
-  'Predicting Crop Yields...',
-  'Estimating Profitability...',
-  'Calculating Risk Scores...',
-  'Optimizing Farm Portfolio...',
-];
+// ── Components ──────────────────────────────────────────────
+
+function DecisionFlow() {
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-4 bg-[#F8F5F0] rounded-xl text-xs font-semibold text-[#6B7280] text-center w-full overflow-x-auto">
+      <div className="flex items-center gap-1 shrink-0">
+        <span>Soil</span><span className="text-[#C4B5A0]">+</span>
+        <span>Weather</span><span className="text-[#C4B5A0]">+</span>
+        <span>Water</span><span className="text-[#C4B5A0]">+</span>
+        <span>Market</span>
+      </div>
+      <ArrowRight className="w-4 h-4 shrink-0 text-[#C4B5A0] hidden sm:block" />
+      <div className="shrink-0 bg-[#E8F5EE] text-[#2D6A4F] px-2 py-1 rounded">AI Engine</div>
+      <ArrowRight className="w-4 h-4 shrink-0 text-[#C4B5A0] hidden sm:block" />
+      <div className="shrink-0 bg-blue-50 text-blue-700 px-2 py-1 rounded">Crop Ranking</div>
+      <ArrowRight className="w-4 h-4 shrink-0 text-[#C4B5A0] hidden sm:block" />
+      <div className="shrink-0 bg-purple-50 text-purple-700 px-2 py-1 rounded">Optimizer</div>
+      <ArrowRight className="w-4 h-4 shrink-0 text-[#C4B5A0] hidden sm:block" />
+      <div className="shrink-0 bg-[#2D6A4F] text-white px-2 py-1 rounded">Farm Plan</div>
+    </div>
+  );
+}
+
+// ── Main Page ───────────────────────────────────────────────
 
 export default function DashboardPage() {
   const { farm, soil, recommendations, portfolio, analysisRun, setAnalysisRun, loadDemoFarm } = useFarm();
   const { farmer } = useAuth();
   const navigate = useNavigate();
   const [analyzing, setAnalyzing] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState(0);
   const [analysisProgress, setAnalysisProgress] = useState(0);
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const runAnalysis = async () => {
     setAnalyzing(true);
-    setAnalysisStep(0);
     setAnalysisProgress(0);
-    for (let i = 0; i < ANALYSIS_STEPS.length; i++) {
-      setAnalysisStep(i);
-      setAnalysisProgress(Math.round(((i + 1) / ANALYSIS_STEPS.length) * 100));
-      await new Promise((r) => setTimeout(r, 600));
+    const steps = 10;
+    for (let i = 1; i <= steps; i++) {
+      setAnalysisProgress(Math.round((i / steps) * 100));
+      await new Promise(r => setTimeout(r, 150));
     }
     setAnalyzing(false);
     setAnalysisRun(true);
@@ -48,17 +69,19 @@ export default function DashboardPage() {
   };
 
   const soilScore = soil ? calcSoilHealthScore(soil) : 0;
-  const soilLabel = soilScore >= 70 ? 'Good' : soilScore >= 50 ? 'Moderate' : 'Poor';
+  
+  // Find "Do Not Plant" or High Risk crops
+  const dangerousCrops = recommendations?.filter(r => 
+    r.action === 'do_not_plant' || r.riskScore >= 75 || (r.waterStressPct ?? 0) >= 70
+  ) || [];
 
   if (!farm) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Leaf className="w-16 h-16 text-[#52B788] mb-4 opacity-60" />
+        <Brain className="w-16 h-16 text-[#52B788] mb-4 opacity-60" />
         <h2 className="text-xl font-bold text-[#1A1A2E] mb-2">No farm selected</h2>
-        <p className="text-sm text-[#6B7280] mb-6 max-w-xs">Add your farm details or load the demo farm to get started.</p>
         <div className="flex gap-3">
           <button onClick={loadDemoFarm} className="btn-primary">Load Demo Farm</button>
-          <button onClick={() => navigate('/field-setup')} className="btn-secondary">Add My Farm</button>
         </div>
       </div>
     );
@@ -66,262 +89,348 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <p className="text-sm text-[#6B7280]">{greeting}, {farmer?.name ?? 'Farmer'}</p>
-          <h1 className="text-2xl font-bold text-[#1A1A2E]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-            {farm.name} — {farm.totalLand} {farm.landUnit}s
-          </h1>
-        </div>
-        <DemoBadge label="Demo Farm" />
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <KpiCard
-          label="Soil Health"
-          value={soilLabel}
-          subLabel={`Score: ${soilScore}/100`}
-          icon={<TestTube2 className="w-4 h-4" />}
-          valueColor={soilScore >= 70 ? 'text-emerald-600' : 'text-amber-600'}
-        />
-        <KpiCard
-          label="Water Availability"
-          value="Moderate"
-          subLabel="Stress: 32/100"
-          icon={<Droplets className="w-4 h-4" />}
-          valueColor="text-amber-600"
-        />
-        <KpiCard
-          label="Expected Profit"
-          value={portfolio ? formatCurrency(portfolio.expectedTotalProfit) : '₹3.88L'}
-          subLabel="Portfolio (demo)"
-          icon={<BarChart3 className="w-4 h-4" />}
-          trend="up"
-          trendValue="vs single crop"
-          valueColor="text-emerald-600"
-        />
-        <KpiCard
-          label="Overall Risk"
-          value={portfolio?.portfolioRisk ?? 'Medium'}
-          subLabel="Portfolio risk"
-          icon={<AlertTriangle className="w-4 h-4" />}
-          valueColor="text-amber-600"
-        />
-        <KpiCard
-          label="AI Confidence"
-          value={`${portfolio?.confidenceScore ?? 83}%`}
-          subLabel="Simulation"
-          icon={<Brain className="w-4 h-4" />}
-          valueColor={getScoreColor(portfolio?.confidenceScore ?? 83)}
-        />
-      </div>
-      <InfoNote variant="warning">
-        * Demo values — based on mock data simulation. Not validated field or market data.
-      </InfoNote>
-
-      {/* Analysis CTA */}
-      {!analyzing ? (
-        <div className="card bg-gradient-to-r from-[#2D6A4F] to-[#40916C] text-white border-0">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="w-5 h-5 text-[#74C69D]" />
-                <span className="font-semibold text-[#74C69D] text-sm uppercase tracking-wider">AI Decision Engine</span>
-              </div>
-              <h2 className="text-xl font-bold mb-1">Run AI Farm Analysis</h2>
-              <p className="text-[#B7E4C7] text-sm">
-                Combine soil, weather, water and market data to generate your optimized crop portfolio.
-              </p>
-            </div>
-            <button
-              onClick={runAnalysis}
-              className="shrink-0 btn-accent text-base px-6 py-3 shadow-lg"
-            >
-              Analyze My Farm <ArrowRight className="w-4 h-4" />
-            </button>
+      
+      {/* ── 1. AI DECISION STATUS & FLOW ───────────────────── */}
+      {analysisRun && portfolio ? (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2.5 rounded-lg flex items-center justify-between text-sm font-semibold">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            AI analysis complete — portfolio optimized.
           </div>
+          <DemoBadge label="Simulation Ready" />
         </div>
       ) : (
-        <div className="card bg-gradient-to-r from-[#2D6A4F] to-[#40916C] text-white border-0">
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Brain className="w-5 h-5 text-[#74C69D]" />
-                <span className="font-semibold text-[#74C69D] text-sm">AI Decision Engine</span>
-              </div>
-              <span className="text-sm font-bold text-white">{analysisProgress}%</span>
-            </div>
-            <h2 className="text-lg font-bold text-white mb-1">
-              {ANALYSIS_STEPS[analysisStep]}
-            </h2>
-            <div className="w-full bg-white/20 rounded-full h-2 mt-3">
-              <div
-                className="h-2 rounded-full bg-[#D4A017] transition-all duration-500"
-                style={{ width: `${analysisProgress}%` }}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {ANALYSIS_STEPS.map((s, i) => (
-              <div key={i} className={`h-1.5 rounded-full transition-all ${i <= analysisStep ? 'bg-[#74C69D]' : 'bg-white/20'}`} />
-            ))}
-          </div>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-lg flex items-center gap-2 text-sm font-semibold">
+          <AlertTriangle className="w-4 h-4 text-amber-600" />
+          Run AI Farm Analysis to generate your farm plan.
         </div>
       )}
 
-      {/* Dashboard grid */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        {/* Soil Card */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                <TestTube2 className="w-4 h-4 text-amber-700" />
-              </div>
-              <h3 className="font-semibold text-[#1A1A2E]">Soil Intelligence</h3>
+      <DecisionFlow />
+
+      {/* ── 2. HERO / TOP SECTION ─────────────────────────── */}
+      <div className="card bg-gradient-to-br from-[#2D6A4F] to-[#40916C] text-white border-0 shadow-lg">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex-1">
+            <div className="text-[#B7E4C7] font-semibold text-sm uppercase tracking-wider mb-2 flex items-center gap-2">
+              <Zap className="w-4 h-4" /> AI Farm Decision Command Center
             </div>
-            <DemoBadge />
+            <h1 className="text-3xl font-bold mb-2">Your Farm Decision</h1>
+            <p className="text-[#E8F5EE] max-w-xl opacity-90">
+              AI-powered crop, risk and land allocation recommendations for your farm.
+              Integrating soil, weather, market, and water data into one actionable plan.
+            </p>
           </div>
-          {soil && (
-            <div className="space-y-3">
-              {[
-                { label: 'pH', value: soil.pH, max: 14, display: soil.pH.toFixed(1), color: '#52B788' },
-                { label: 'Nitrogen', value: soil.nitrogen, max: 400, display: `${soil.nitrogen} kg/ha`, color: '#2D6A4F' },
-                { label: 'Phosphorus', value: soil.phosphorus, max: 100, display: `${soil.phosphorus} kg/ha`, color: '#D4A017' },
-                { label: 'Potassium', value: soil.potassium, max: 300, display: `${soil.potassium} kg/ha`, color: '#52B788' },
-                { label: 'Moisture', value: soil.moisture, max: 100, display: `${soil.moisture}%`, color: '#40916C' },
-                { label: 'Org. Carbon', value: soil.organicCarbon, max: 3, display: `${soil.organicCarbon}%`, color: '#95D5B2' },
-              ].map(({ label, value, max, display, color }) => (
-                <div key={label}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[#6B7280] font-medium">{label}</span>
-                    <span className="font-semibold text-[#1A1A2E]">{display}</span>
-                  </div>
-                  <ScoreBar value={value} max={max} color={color} height={6} />
-                </div>
-              ))}
-            </div>
-          )}
-          <button onClick={() => navigate('/soil')} className="mt-4 text-xs text-[#2D6A4F] font-semibold flex items-center gap-1 hover:underline">
-            View Soil Intelligence <ArrowRight className="w-3 h-3" />
-          </button>
+          
+          <div className="flex flex-col gap-3 shrink-0 w-full md:w-auto">
+            <button 
+              onClick={runAnalysis} 
+              disabled={analyzing}
+              className="btn bg-[#D4A017] hover:bg-[#b8860b] text-white font-bold py-3.5 px-6 shadow-xl w-full flex items-center justify-center gap-2 text-lg"
+            >
+              {analyzing ? `Analyzing... ${analysisProgress}%` : 'Run AI Farm Analysis'}
+              {!analyzing && <ArrowRight className="w-5 h-5" />}
+            </button>
+            {analysisRun && (
+              <button onClick={() => navigate('/portfolio')} className="text-center text-sm text-[#B7E4C7] hover:text-white font-semibold flex items-center justify-center gap-1">
+                View Full Analysis <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Weather Card */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <CloudSun className="w-4 h-4 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-[#1A1A2E]">Weather & Water</h3>
-            </div>
-            <DemoBadge />
-          </div>
-          <div className="space-y-3 mb-4">
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'Temp', value: `${DEMO_WEATHER.currentTemp}°C` },
-                { label: 'Humidity', value: `${DEMO_WEATHER.currentHumidity}%` },
-                { label: 'Rainfall', value: `${DEMO_WEATHER.currentRainfall}mm` },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-blue-50 rounded-xl p-2.5 text-center">
-                  <div className="text-xs text-[#6B7280]">{label}</div>
-                  <div className="font-bold text-[#1A1A2E] text-sm">{value}</div>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between p-2.5 bg-amber-50 rounded-xl">
-              <span className="text-xs text-[#6B7280]">Weather Risk</span>
-              <RiskBadge risk="medium" />
-            </div>
-            <div className="flex items-center justify-between p-2.5 bg-[#F8F5F0] rounded-xl">
-              <span className="text-xs text-[#6B7280]">Water Stress Score</span>
-              <span className="font-bold text-[#1A1A2E] text-sm">32/100</span>
-            </div>
-            <div className="text-xs text-[#6B7280] bg-[#E8F5EE] p-2.5 rounded-xl">
-              💧 Prefer crops with low-to-moderate water requirements
-            </div>
-          </div>
-          <button onClick={() => navigate('/weather-water')} className="text-xs text-[#2D6A4F] font-semibold flex items-center gap-1 hover:underline">
-            View Weather & Water <ArrowRight className="w-3 h-3" />
-          </button>
+      {/* ── 3. KEY FARM KPIs ──────────────────────────────── */}
+      {analysisRun && portfolio && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiCard
+            label="Expected Profit"
+            value={formatCurrency(portfolio.expectedTotalProfit)}
+            subLabel="Simulated projection"
+            icon={<TrendingUp className="w-5 h-5" />}
+            valueColor="text-emerald-700"
+            className="border-t-4 border-t-emerald-500"
+          />
+          <KpiCard
+            label="Risk"
+            value={<RiskBadge risk={portfolio.portfolioRisk} className="text-sm py-0.5 px-2" />}
+            subLabel="Portfolio risk"
+            icon={<ShieldAlert className="w-5 h-5" />}
+            className="border-t-4 border-t-amber-500"
+          />
+          <KpiCard
+            label="Water Stress"
+            value={`${portfolio.waterStressScore}/100`}
+            subLabel="Projected water stress"
+            icon={<Droplets className="w-5 h-5" />}
+            valueColor={portfolio.waterStressScore > 50 ? 'text-red-500' : 'text-blue-600'}
+            className="border-t-4 border-t-blue-500"
+          />
+          <KpiCard
+            label="Data Confidence"
+            value={`${portfolio.confidenceScore}%`}
+            subLabel="Data completeness"
+            icon={<Activity className="w-5 h-5" />}
+            valueColor={getScoreColor(portfolio.confidenceScore)}
+            className="border-t-4 border-t-purple-500"
+          />
         </div>
+      )}
 
-        {/* AI Recommendation Card */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#E8F5EE] flex items-center justify-center">
-                <Brain className="w-4 h-4 text-[#2D6A4F]" />
+      {/* ── 4. FARM DECISION SUMMARY ──────────────────────── */}
+      {analysisRun && portfolio && (
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="card shadow-md border-emerald-100">
+              <div className="flex items-center gap-2 mb-4">
+                <Brain className="w-5 h-5 text-[#2D6A4F]" />
+                <h2 className="text-lg font-bold text-[#1A1A2E]">Recommended Portfolio</h2>
+                <DemoBadge label="Model Output" />
               </div>
-              <h3 className="font-semibold text-[#1A1A2E]">AI Recommendation</h3>
-            </div>
-            <DemoBadge />
-          </div>
-
-          {analysisRun && portfolio ? (
-            <>
-              <div className="space-y-2.5 mb-4">
-                {portfolio.allocations.map((a) => (
-                  <div key={a.cropId} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F8F5F0]">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: a.color }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-[#1A1A2E]">{a.cropName}</span>
-                        <span className="text-xs font-bold text-[#2D6A4F]">{a.percentage}%</span>
+              
+              <div className="flex flex-col sm:flex-row gap-6 items-center">
+                <div className="w-48 h-48 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={portfolio.allocations}
+                        dataKey="percentage"
+                        nameKey="cropName"
+                        cx="50%" cy="50%"
+                        innerRadius={60} outerRadius={80}
+                        paddingAngle={2}
+                      >
+                        {portfolio.allocations.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip formatter={(val: any) => [`${val}%`, 'Allocation']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="flex-1 w-full space-y-3">
+                  {portfolio.allocations.map(a => (
+                    <div key={a.cropId} className="flex items-center justify-between p-2 hover:bg-[#F8F5F0] rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full" style={{ background: a.color }} />
+                        <div>
+                          <div className="font-bold text-[#1A1A2E]">{a.cropName}</div>
+                          <div className="text-xs text-[#6B7280]">{a.acres} acres</div>
+                        </div>
                       </div>
-                      <div className="text-xs text-[#6B7280]">{a.acres} acres · {formatCurrency(a.expectedProfit)} profit</div>
+                      <div className="text-right">
+                        <div className="font-bold text-[#2D6A4F]">{a.percentage}%</div>
+                        <div className="text-xs text-[#6B7280]">{formatCurrency(a.expectedProfit)} profit</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Why this recommendation */}
+            <div className="card bg-[#E8F5EE] border-[#52B788]">
+              <div className="flex items-start gap-3">
+                <div className="bg-[#2D6A4F] p-2 rounded-lg text-white mt-1">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#1A1A2E] mb-2">Why this recommendation?</h3>
+                  <ul className="space-y-2">
+                    {portfolio.explanations?.slice(0, 4).map((expl, i) => (
+                      <li key={i} className="text-sm text-[#4B5563] flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-[#52B788] shrink-0 mt-0.5" />
+                        {expl}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* DO NOT PLANT */}
+            {dangerousCrops.length > 0 ? (
+              <div className="card border-red-200 bg-red-50">
+                <div className="flex items-center gap-2 mb-3 text-red-700">
+                  <AlertTriangle className="w-5 h-5" />
+                  <h3 className="font-bold">DO NOT PLANT WARNING</h3>
+                </div>
+                <div className="space-y-3">
+                  {dangerousCrops.map(c => (
+                    <div key={c.cropId} className="bg-white p-3 rounded border border-red-100 shadow-sm">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-bold text-[#1A1A2E]">{c.cropName}</span>
+                        <RiskBadge risk={c.riskLevel} />
+                      </div>
+                      <p className="text-xs text-red-600 mb-2">
+                        {c.warnings[0] || 'High risk or water stress detected.'}
+                      </p>
+                      <div className="text-[10px] text-[#6B7280] flex gap-3">
+                        <span>Risk Score: {c.riskScore}/100</span>
+                        <span>Water Stress: {c.waterStressPct}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <InfoNote variant="success">No extreme high-risk crops detected in the current candidate list.</InfoNote>
+            )}
+            
+            {/* Judge Demo CTA */}
+            <div className="card bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-amber-900 mb-1">Test a Different Future</h3>
+                  <p className="text-xs text-amber-700 max-w-md">
+                    See how your farm plan changes when rainfall, water or market conditions change.
+                  </p>
+                </div>
+                <button onClick={() => navigate('/simulator')} className="btn-accent shrink-0 text-sm py-2">
+                  Run What-If Scenario
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Score Chart */}
+            <div className="card">
+              <SectionLabel>Crop Decision Score</SectionLabel>
+              <div className="h-48 mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={recommendations?.slice(0, 5) || []} layout="vertical" margin={{ left: -20, right: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F0EDE8" />
+                    <XAxis type="number" domain={[0, 100]} hide />
+                    <YAxis dataKey="cropName" type="category" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                    <RechartsTooltip cursor={{ fill: '#F8F5F0' }} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="overallScore" fill="#52B788" radius={[0, 4, 4, 0]} barSize={16}>
+                      {recommendations?.slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.overallScore >= 70 ? '#2D6A4F' : entry.overallScore >= 50 ? '#52B788' : '#D4A017'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="card">
+              <SectionLabel>Farm Decision Tools</SectionLabel>
+              <div className="space-y-2 mt-3">
+                {[
+                  { label: 'AI Crop Analysis', to: '/ai-analysis', icon: Brain },
+                  { label: 'Crop Portfolio', to: '/portfolio', icon: PieChart },
+                  { label: 'What-If Simulator', to: '/simulator', icon: Zap },
+                  { label: '3-Season Planner', to: '/season-planner', icon: CalendarDays },
+                ].map(tool => (
+                  <button key={tool.to} onClick={() => navigate(tool.to)} className="w-full flex items-center justify-between p-3 rounded-lg border border-[#E5E0D8] hover:border-[#52B788] hover:bg-[#F8F5F0] transition-colors group">
+                    <div className="flex items-center gap-3 text-sm font-semibold text-[#1A1A2E]">
+                      <tool.icon className="w-4 h-4 text-[#6B7280] group-hover:text-[#2D6A4F]" />
+                      {tool.label}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#C4B5A0] group-hover:text-[#2D6A4F]" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3-Season Preview */}
+            <div className="card bg-[#F8F5F0]">
+              <div className="flex justify-between items-center mb-3">
+                <SectionLabel>Long-Term Farm Plan</SectionLabel>
+                <DemoBadge label="Preview" />
+              </div>
+              <div className="space-y-2">
+                {THREE_SEASON_PLAN_A.seasons.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 bg-white rounded border border-[#E5E0D8]">
+                    <div>
+                      <div className="text-[10px] text-[#6B7280] font-bold">SEASON {i + 1}</div>
+                      <div className="text-xs font-semibold text-[#1A1A2E]">{s.crops[0]?.cropName} ({s.crops[0]?.percentage}%)</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-bold text-[#2D6A4F]">{formatCurrency(s.totalExpectedProfit)}</div>
+                      <RiskBadge risk={s.portfolioRisk} className="text-[9px] py-0 px-1" />
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="bg-[#E8F5EE] rounded-xl p-3 mb-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-[#2D6A4F] font-medium">Total Expected Profit</span>
-                  <span className="font-bold text-[#2D6A4F]">{formatCurrency(portfolio.expectedTotalProfit)}</span>
-                </div>
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-xs text-[#6B7280]">Portfolio Risk</span>
-                  <RiskBadge risk={portfolio.portfolioRisk} />
-                </div>
-              </div>
-              <button onClick={() => navigate('/portfolio')} className="text-xs text-[#2D6A4F] font-semibold flex items-center gap-1 hover:underline">
-                View Portfolio Optimizer <ArrowRight className="w-3 h-3" />
-              </button>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Brain className="w-12 h-12 text-[#52B788] opacity-40 mb-3" />
-              <p className="text-sm text-[#6B7280] mb-4">Run AI Analysis to see your crop portfolio recommendation</p>
-              <button onClick={runAnalysis} className="btn-primary text-sm py-2">
-                Run Analysis
+              <button onClick={() => navigate('/season-planner')} className="w-full mt-3 text-xs text-[#2D6A4F] font-semibold text-center hover:underline">
+                View 3-Season Plan
               </button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Quick Actions */}
-      <div>
-        <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3">Quick Navigation</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: 'Soil', icon: TestTube2, to: '/soil', color: 'bg-amber-50 text-amber-700' },
-            { label: 'Weather', icon: CloudSun, to: '/weather-water', color: 'bg-blue-50 text-blue-700' },
-            { label: 'Market', icon: TrendingUp, to: '/market', color: 'bg-purple-50 text-purple-700' },
-            { label: 'AI Analysis', icon: Brain, to: '/ai-analysis', color: 'bg-[#E8F5EE] text-[#2D6A4F]' },
-            { label: 'Portfolio', icon: BarChart3, to: '/portfolio', color: 'bg-[#E8F5EE] text-[#40916C]' },
-            { label: 'Action Plan', icon: CheckCircle2, to: '/action-plan', color: 'bg-emerald-50 text-emerald-700' },
-          ].map(({ label, icon: Icon, to, color }) => (
-            <button key={to} onClick={() => navigate(to)} className={`card-sm flex flex-col items-center gap-2 hover:shadow-md transition-all cursor-pointer ${color}`}>
-              <Icon className="w-5 h-5" />
-              <span className="text-xs font-semibold">{label}</span>
-            </button>
-          ))}
+      {/* ── 5. FOUNDATIONAL DATA CARDS ────────────────────── */}
+      <div className="grid md:grid-cols-4 gap-4 pt-4 border-t border-[#E5E0D8]">
+        
+        {/* Soil Health */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <TestTube2 className="w-4 h-4 text-amber-700" />
+            <h3 className="font-semibold text-sm">Soil Health</h3>
+          </div>
+          <div className="space-y-2 mb-3">
+            <div className="flex justify-between text-xs"><span>Score</span><span className="font-bold">{soilScore}/100</span></div>
+            <div className="flex justify-between text-xs"><span>pH</span><span className="font-bold">{soil?.pH.toFixed(1) || '-'}</span></div>
+            <div className="flex justify-between text-xs"><span>Nitrogen</span><span className="font-bold">{soil?.nitrogen || '-'}</span></div>
+            <div className="flex justify-between text-xs"><span>Moisture</span><span className="font-bold">{soil?.moisture || '-'}%</span></div>
+          </div>
+          <button onClick={() => navigate('/soil')} className="text-xs text-[#2D6A4F] font-semibold hover:underline">View Soil Intelligence →</button>
         </div>
+
+        {/* Weather */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <CloudSun className="w-4 h-4 text-blue-600" />
+            <h3 className="font-semibold text-sm">Weather Outlook</h3>
+          </div>
+          <div className="space-y-2 mb-3">
+            <div className="flex justify-between text-xs"><span>Temp</span><span className="font-bold">{DEMO_WEATHER.currentTemp}°C</span></div>
+            <div className="flex justify-between text-xs"><span>Rainfall</span><span className="font-bold">{DEMO_WEATHER.currentRainfall}mm</span></div>
+            <div className="flex justify-between text-xs"><span>Risk</span><span className="font-bold capitalize text-amber-600">{DEMO_WEATHER.weatherRisk}</span></div>
+          </div>
+          <p className="text-[10px] text-[#6B7280] mb-3">{DEMO_WEATHER.forecast[0]?.weatherCondition}</p>
+          <button onClick={() => navigate('/weather-water')} className="text-xs text-[#2D6A4F] font-semibold hover:underline">View Weather & Water →</button>
+        </div>
+
+        {/* Water */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <Droplets className="w-4 h-4 text-cyan-600" />
+            <h3 className="font-semibold text-sm">Water Availability</h3>
+          </div>
+          <div className="space-y-2 mb-3">
+            <div className="flex justify-between text-xs"><span>Availability</span><span className="font-bold capitalize">{DEMO_WATER.availability}</span></div>
+            <div className="flex justify-between text-xs"><span>Source</span><span className="font-bold capitalize">{DEMO_WATER.source}</span></div>
+            <div className="flex justify-between text-xs"><span>Irrigation</span><span className="font-bold capitalize">{DEMO_WATER.irrigationType}</span></div>
+          </div>
+          {portfolio && (
+            <div className="text-[10px] bg-blue-50 text-blue-700 p-1.5 rounded mb-3">
+              Stress: {portfolio.waterStressScore}%
+            </div>
+          )}
+          <button onClick={() => navigate('/simulator')} className="text-xs text-amber-700 font-semibold hover:underline">Check What-If Drought →</button>
+        </div>
+
+        {/* Market */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-purple-600" />
+            <h3 className="font-semibold text-sm">Market Intel</h3>
+          </div>
+          <div className="space-y-2 mb-3">
+            <div className="flex justify-between text-xs"><span>Wheat</span><span className="font-bold">₹{DEMO_MARKET.prices[0]?.currentPrice}/q</span></div>
+            <div className="flex justify-between text-xs"><span>Mustard</span><span className="font-bold">₹{DEMO_MARKET.prices[1]?.currentPrice}/q</span></div>
+            <div className="flex justify-between text-xs"><span>Trend</span><span className="font-bold text-emerald-600 capitalize">{DEMO_MARKET.prices[0]?.trend}</span></div>
+          </div>
+          <p className="text-[10px] text-[#6B7280] mb-3">Updated: Today (Mock)</p>
+          <button onClick={() => navigate('/market')} className="text-xs text-[#2D6A4F] font-semibold hover:underline">View Market Intelligence →</button>
+        </div>
+
       </div>
     </div>
   );

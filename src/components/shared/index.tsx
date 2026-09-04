@@ -104,7 +104,7 @@ export function ScoreBar({ value, max = 100, color = '#2D6A4F', height = 8 }: Sc
 // ── KpiCard ─────────────────────────────────────────────────
 interface KpiCardProps {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   subLabel?: string;
   icon?: React.ReactNode;
   trend?: 'up' | 'down' | 'stable';

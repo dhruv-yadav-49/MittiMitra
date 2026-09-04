@@ -62,7 +62,7 @@ export default function LandingPage() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#52B788]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#D4A017]/8 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20 lg:pt-12 lg:pb-32">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#E8F5EE] rounded-full text-[#2D6A4F] text-xs font-semibold mb-6">

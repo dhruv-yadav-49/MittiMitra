@@ -34,8 +34,8 @@ export default function AiAnalysisPage() {
     { axis: 'Soil', value: rec.soilCompatibility },
     { axis: 'Weather', value: rec.weatherCompatibility },
     { axis: 'Market', value: rec.marketCompatibility },
-    { axis: 'Yield', value: Math.round(rec.suitabilityScore * 0.9) },
-    { axis: 'Water', value: rec.waterRequirement === 'low' ? 90 : rec.waterRequirement === 'medium' ? 70 : 40 },
+    { axis: 'Water', value: rec.waterFitScore ?? (rec.waterRequirement === 'low' ? 90 : rec.waterRequirement === 'medium' ? 70 : 40) },
+    { axis: 'History', value: rec.historyScore ?? 65 },
   ];
 
   return (
@@ -123,7 +123,7 @@ export default function AiAnalysisPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#E5E0D8]">
-                {['Rank', 'Crop', 'Suitability', 'Yield (q/ac)', 'Profit/ac', 'Water', 'Risk', 'Confidence', 'Action'].map(h => (
+                {['Rank', 'Crop', 'Score', 'Yield (q/ac)', 'Profit/ac', 'Water', 'Risk', 'Confidence', 'Action'].map(h => (
                   <th key={h} className="text-left py-2 px-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -139,8 +139,8 @@ export default function AiAnalysisPage() {
                   <td className="py-3 px-3 font-semibold text-[#1A1A2E]">{rec.cropName}</td>
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2">
-                      <ScoreBar value={rec.suitabilityScore} max={100} height={6} color="#52B788" />
-                      <span className="text-xs font-bold text-[#2D6A4F] w-8">{rec.suitabilityScore}%</span>
+                      <ScoreBar value={rec.overallScore} max={100} height={6} color="#52B788" />
+                      <span className="text-xs font-bold text-[#2D6A4F] w-8">{rec.overallScore}%</span>
                     </div>
                   </td>
                   <td className="py-3 px-3 font-medium">{rec.expectedYield}</td>
@@ -178,8 +178,8 @@ export default function AiAnalysisPage() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-[#2D6A4F]">{rec.suitabilityScore}%</div>
-                <div className="text-xs text-[#6B7280]">Suitability</div>
+                <div className="text-2xl font-bold text-[#2D6A4F]">{rec.overallScore}%</div>
+                <div className="text-xs text-[#6B7280]">Overall Score</div>
               </div>
             </div>
 
@@ -218,8 +218,22 @@ export default function AiAnalysisPage() {
               </ResponsiveContainer>
             </div>
 
+            {/* Score Breakdown */}
+            <div className="grid grid-cols-4 gap-1.5 mt-3 mb-3">
+              {[
+                { label: 'Soil', value: rec.soilCompatibility, color: '#D4A017' },
+                { label: 'Weather', value: rec.weatherCompatibility, color: '#60A5FA' },
+                { label: 'Water', value: rec.waterFitScore ?? 0, color: '#2D6A4F' },
+                { label: 'Market', value: rec.marketCompatibility, color: '#8B5CF6' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-[#F8F5F0] rounded-lg p-1.5 text-center">
+                  <div className="text-[9px] text-[#6B7280] font-medium">{label}</div>
+                  <div className="text-sm font-bold" style={{ color }}>{value}</div>
+                </div>
+              ))}
+            </div>
             {/* Reasons */}
-            <div className="mt-3 pt-3 border-t border-[#E5E0D8]">
+            <div className="pt-3 border-t border-[#E5E0D8]">
               <div className="text-xs font-semibold text-[#6B7280] mb-2">Why Recommended</div>
               <div className="space-y-1">
                 {rec.reasons.slice(0, 3).map((r, i) => (
