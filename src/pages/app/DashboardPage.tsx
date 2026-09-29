@@ -109,7 +109,7 @@ export default function DashboardPage() {
       <DecisionFlow />
 
       {/* ── 2. HERO / TOP SECTION ─────────────────────────── */}
-      <div className="card bg-gradient-to-br from-[#2D6A4F] to-[#40916C] text-white border-0 shadow-lg">
+      <div className="rounded-2xl p-6 bg-gradient-to-br from-[#2D6A4F] to-[#40916C] text-white border-0 shadow-lg">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex-1">
             <div className="text-[#B7E4C7] font-semibold text-sm uppercase tracking-wider mb-2 flex items-center gap-2">
